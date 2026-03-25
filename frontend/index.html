@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        input, button {
+            margin: 8px 0;
+            padding: 10px;
+            font-size: 16px;
+        }
+        input {
+            width: calc(100% - 22px);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #e9ecef;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+        .balance {
+            font-weight: bold;
+            font-size: 24px;
+        }
+        .actions {
+            margin: 15px 0;
+        }
+        .uuid-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .uuid-group input {
+            flex: 1;
+        }
+        .uuid-group button {
+            width: auto;
+            background-color: #6c757d;
+        }
+        .uuid-group button.copy-btn {
+            background-color: #28a745;
+        }
+        .history {
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        .history h3 {
+            margin-top: 0;
+        }
+        .history ul {
+            list-style: none;
+            padding: 0;
+        }
+        .history li {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Управление кошельком</h1>
+        
+        <div class="uuid-group">
+            <input type="text" id="walletId" placeholder="UUID кошелька" value="">
+            <button onclick="generateUUID()">Сгенерировать</button>
+            <button onclick="copyUUID()" class="copy-btn">Копировать</button>
+        </div>
+
+        <div class="actions">
+            <input type="number" id="amount" placeholder="Сумма (например, 100.50)" step="0.01">
+            <div>
+                <button onclick="deposit()">Пополнить</button>
+                <button onclick="withdraw()">Снять</button>
+                <button onclick="getBalance()">Показать баланс</button>
+            </div>
+        </div>
+
+        <div id="result" class="result">
+            <!-- Результат -->
+        </div>
+
+        <div id="history" class="history">
+            <h3>История операций</h3>
+            <ul id="historyList"></ul>
+        </div>
+    </div>
+
+    <script>
+        const apiBase = '/api/v1/wallets';
+
+        function getWalletId() {
+            return document.getElementById('walletId').value.trim();
+        }
+
+        function generateUUID() {
+            const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+            document.getElementById('walletId').value = uuid;
+            showResult(`Сгенерирован новый UUID: ${uuid}`, 'success');
+        }
+
+        function copyUUID() {
+            const uuidInput = document.getElementById('walletId');
+            uuidInput.select();
+            document.execCommand('copy');
+            showResult('UUID скопирован в буфер обмена', 'success');
+        }
+
+        async function performOperation(operationType) {
+            const walletId = getWalletId();
+            if (!walletId) {
+                showResult('Введите или сгенерируйте UUID кошелька', 'error');
+                return;
+            }
+            const amount = parseFloat(document.getElementById('amount').value);
+            if (isNaN(amount) || amount <= 0) {
+                showResult('Введите положительную сумму', 'error');
+                return;
+            }
+
+            const url = `${apiBase}/${walletId}/operation`;
+            const payload = {
+                operation_type: operationType.toUpperCase(),
+                amount: amount.toFixed(2)
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    showResult(`Операция успешна. Новый баланс: ${data.balance}`, 'success');
+                    
+                    updateHistory(data.transactions);
+                } else {
+                    showResult(`Ошибка: ${data.detail || 'Неизвестная ошибка'}`, 'error');
+                }
+            } catch (err) {
+                showResult(`Ошибка сети: ${err.message}`, 'error');
+            }
+        }
+
+        async function deposit() {
+            await performOperation('deposit');
+        }
+
+        async function withdraw() {
+            await performOperation('withdraw');
+        }
+
+        async function getBalance() {
+            const walletId = getWalletId();
+            if (!walletId) {
+                showResult('Введите или сгенерируйте UUID кошелька', 'error');
+                return;
+            }
+            const url = `${apiBase}/${walletId}?include_history=true`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (response.ok) {
+                    showResult(`Текущий баланс: ${data.balance}`, 'success');
+                    updateHistory(data.transactions);
+                } else {
+                    showResult(`Ошибка: ${data.detail || 'Кошелёк не найден'}`, 'error');
+                    updateHistory([]);
+                }
+            } catch (err) {
+                showResult(`Ошибка сети: ${err.message}`, 'error');
+            }
+        }
+
+        function updateHistory(transactions) {
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            if (!transactions || transactions.length === 0) {
+                historyList.innerHTML = '<li>История пуста</li>';
+                return;
+            }
+            transactions.forEach(tx => {
+                const li = document.createElement('li');
+                const date = new Date(tx.timestamp).toLocaleString();
+                li.textContent = `${date} — ${tx.operation_type} ${tx.amount}`;
+                historyList.appendChild(li);
+            });
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<p class="${type}">${message}</p>`;
+            setTimeout(() => {
+                if (resultDiv.innerHTML === `<p class="${type}">${message}</p>`) {
+                    resultDiv.innerHTML = '';
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
