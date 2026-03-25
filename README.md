@@ -7,15 +7,15 @@
 
 ## Быстрый старт
 
-1. Клонируйте репозиторий:
-   ```bash
+Клонируйте репозиторий:
+   
    git clone https://github.com/yourusername/wallet-api.git
-   cd wallet-api
-   ```
+   
 Запустите все контейнеры:
 
-bash
+
 docker-compose up -d --build
+
 Откройте в браузере:
 
 Веб-интерфейс: http://localhost (порт 80)
@@ -65,15 +65,11 @@ GET /api/v1/wallets/{wallet_uuid}
 Параметр include_history=true добавляет последние 10 операций.
 
 ## Переменные окружения
-Создайте .env из .env.example:
 
-env
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=wallet_db
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/wallet_db
+Создайте .env из .env.example
+
 ## Запуск тестов
-bash
+
 docker-compose exec app pytest tests/
 
 ## Примечания
