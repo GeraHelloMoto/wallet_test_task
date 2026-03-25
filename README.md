@@ -33,34 +33,6 @@ Infrastructure: Docker, docker-compose
 
 Testing: pytest, pytest-asyncio, httpx
 
-## Структура проекта
-text
-wallet-api/
-├── app/                     # Бэкенд на FastAPI
-│   ├── main.py
-│   ├── models.py            # SQLAlchemy модели (Wallet, Transaction)
-│   ├── schemas.py           # Pydantic схемы
-│   ├── database.py          # Подключение к БД
-│   ├── crud.py              # Логика работы с БД (с блокировкой)
-│   ├── config.py            # Настройки из переменных окружения
-│   └── routes/
-│       └── wallets.py       # API эндпоинты
-├── frontend/                # Статический фронтенд + Nginx
-│   ├── index.html
-│   ├── nginx.conf
-│   └── Dockerfile
-├── migrations/              # Alembic миграции
-├── tests/                   # Тесты
-│   ├── conftest.py
-│   └── test_wallets.py
-├── docker-compose.yml
-├── Dockerfile               # Сборка бэкенда
-├── requirements.txt
-├── pytest.ini
-├── .env.example
-├── .gitignore
-└── README.md
-
 
 ## API Endpoints
 POST /api/v1/wallets/{wallet_uuid}/operation
